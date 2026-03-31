@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>愛の不時着クイズ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #0b0b1e;
+    --bg2: #12122a;
+    --card: rgba(255,255,255,0.06);
+    --card-border: rgba(255,210,130,0.18);
+    --gold: #f0c87a;
+    --gold2: #c8a46e;
+    --text: #f0e6d3;
+    --text-muted: rgba(240,200,130,0.55);
+    --green: #6ecfa0;
+    --red: #e07878;
+    --radius: 18px;
+    --radius-sm: 12px;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(60,40,120,0.45) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(20,40,80,0.5) 0%, transparent 60%),
+      linear-gradient(160deg, #0b0b1e 0%, #0f0f28 50%, #0a1020 100%);
+  }
+
+  /* Stars */
+  #stars-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* App wrapper */
+  #app {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 0 env(safe-area-inset-bottom, 16px);
+  }
+
+  /* ─── SCREENS ─── */
+  .screen { display: none; flex-direction: column; min-height: 100vh; padding: 24px 16px 32px; animation: fadeUp 0.4s ease; }
+  .screen.active { display: flex; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── HOME ─── */
+  #home {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 0;
+  }
+
+  .home-deco {
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+  }
+
+  .home-ko {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 15px;
+    letter-spacing: 3px;
+    color: var(--gold2);
+    margin-bottom: 10px;
+  }
+
+  .home-title {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .home-en {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+    margin-bottom: 40px;
+  }
+
+  .home-heart {
+    font-size: 52px;
+    margin-bottom: 32px;
+    display: block;
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+
+  .home-desc {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 32px;
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .home-desc p {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    margin-bottom: 10px;
+  }
+
+  .home-desc p:last-child { margin-bottom: 0; }
+
+  .badge-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .badge-ox   { background: rgba(120,160,255,0.18); color: #a0b8ff; border: 1px solid rgba(120,160,255,0.28); }
+  .badge-4ch  { background: rgba(200,160,80,0.18); color: #c8a460; border: 1px solid rgba(200,160,80,0.28); }
+  .badge-ch   { background: rgba(200,120,200,0.18); color: #d0a0d0; border: 1px solid rgba(200,120,200,0.28); }
+  .badge-easy { background: rgba(100,200,150,0.18); color: var(--green); border: 1px solid rgba(100,200,150,0.28); }
+  .badge-mid  { background: rgba(200,160,80,0.18); color: #c8a460; border: 1px solid rgba(200,160,80,0.28); }
+  .badge-hard { background: rgba(200,80,80,0.18); color: var(--red); border: 1px solid rgba(200,80,80,0.28); }
+
+  .start-btn {
+    width: 100%;
+    max-width: 300px;
+    padding: 18px;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--gold2), var(--gold));
+    border: none;
+    color: #1a0a00;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: transform 0.15s, opacity 0.15s;
+    box-shadow: 0 4px 24px rgba(200,160,80,0.25);
+  }
+
+  .start-btn:active { transform: scale(0.97); opacity: 0.9; }
+
+  /* ─── QUIZ ─── */
+  #quiz { justify-content: flex-start; gap: 0; }
+
+  .quiz-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .quiz-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .quiz-score-display {
+    font-size: 13px;
+    color: var(--gold);
+    font-weight: 700;
+  }
+
+  .progress-wrap {
+    height: 5px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold2), var(--gold));
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+
+  .dots-row {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    transition: background 0.3s;
+  }
+  .dot.correct { background: var(--green); }
+  .dot.wrong   { background: var(--red); }
+  .dot.current { background: var(--gold); animation: dotPulse 0.8s ease infinite alternate; }
+
+  @keyframes dotPulse { from { opacity: 0.5; } to { opacity: 1; } }
+
+  .q-meta {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .q-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 18px;
+  }
+
+  .question-text {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 18px;
+    line-height: 1.75;
+    color: var(--text);
+  }
+
+  /* 4-choice */
+  .choices { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+
+  .choice-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.12s;
+    width: 100%;
+  }
+
+  .choice-btn:active { transform: scale(0.98); }
+
+  .choice-btn .label {
+    font-size: 11px;
+    color: var(--text-muted);
+    min-width: 20px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .choice-btn.correct { background: rgba(110,207,160,0.18); border-color: rgba(110,207,160,0.5); color: var(--green); }
+  .choice-btn.wrong   { background: rgba(224,120,120,0.15); border-color: rgba(224,120,120,0.4); color: var(--red); }
+  .choice-btn.dim     { opacity: 0.4; }
+  .choice-btn.disabled { pointer-events: none; }
+
+  /* OX */
+  .ox-wrap { display: flex; gap: 12px; margin-bottom: 16px; }
+
+  .ox-btn {
+    flex: 1;
+    height: 90px;
+    border-radius: var(--radius);
+    font-size: 40px;
+    border: 2px solid var(--card-border);
+    background: var(--card);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    color: var(--text);
+  }
+
+  .ox-btn:active { transform: scale(0.96); }
+  .ox-btn.correct { background: rgba(110,207,160,0.18); border-color: rgba(110,207,160,0.6); }
+  .ox-btn.wrong   { background: rgba(224,120,120,0.15); border-color: rgba(224,120,120,0.5); }
+  .ox-btn.disabled { pointer-events: none; opacity: 0.6; }
+
+  /* Chara */
+  .chara-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+
+  .chara-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: 100%;
+  }
+
+  .chara-btn .icon { font-size: 26px; line-height: 1; }
+  .chara-btn:active { transform: scale(0.98); }
+  .chara-btn.correct { background: rgba(110,207,160,0.18); border-color: rgba(110,207,160,0.5); color: var(--green); }
+  .chara-btn.wrong   { background: rgba(224,120,120,0.15); border-color: rgba(224,120,120,0.4); color: var(--red); }
+  .chara-btn.dim     { opacity: 0.4; }
+  .chara-btn.disabled { pointer-events: none; }
+
+  /* Feedback */
+  .feedback {
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.65;
+    margin-bottom: 14px;
+    display: none;
+    animation: fadeUp 0.3s ease;
+  }
+
+  .feedback.correct { background: rgba(110,207,160,0.12); border: 1px solid rgba(110,207,160,0.3); color: var(--green); }
+  .feedback.wrong   { background: rgba(224,120,120,0.10); border: 1px solid rgba(224,120,120,0.3); color: #e8a0a0; }
+
+  .feedback-icon { font-size: 18px; margin-right: 6px; }
+
+  .next-btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--gold2), var(--gold));
+    border: none;
+    color: #1a0a00;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: none;
+    transition: transform 0.12s, opacity 0.12s;
+    letter-spacing: 1px;
+  }
+
+  .next-btn:active { transform: scale(0.98); opacity: 0.9; }
+  .next-btn.show { display: block; animation: fadeUp 0.3s ease; }
+
+  /* ─── RESULT ─── */
+  #result {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+
+  .result-emoji { font-size: 64px; margin-bottom: 16px; animation: pop 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+
+  @keyframes pop {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  .result-title {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 24px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .result-score {
+    font-size: 52px;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 4px;
+    font-family: 'Noto Serif JP', serif;
+  }
+
+  .result-total { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; }
+
+  .result-dots {
+    display: flex;
+    gap: 7px;
+    justify-content: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    max-width: 300px;
+  }
+
+  .result-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .result-dot.c { background: var(--green); }
+  .result-dot.w { background: var(--red); }
+
+  .result-msg {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text-muted);
+    margin-bottom: 32px;
+    max-width: 300px;
+    white-space: pre-line;
+  }
+
+  .result-btn {
+    width: 100%;
+    max-width: 280px;
+    padding: 17px;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--gold2), var(--gold));
+    border: none;
+    color: #1a0a00;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: transform 0.12s;
+    box-shadow: 0 4px 24px rgba(200,160,80,0.22);
+    margin-bottom: 14px;
+  }
+
+  .result-btn:active { transform: scale(0.97); }
+
+  .share-btn {
+    width: 100%;
+    max-width: 280px;
+    padding: 15px;
+    border-radius: var(--radius);
+    background: transparent;
+    border: 1px solid var(--card-border);
+    color: var(--text-muted);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+  }
+
+  .share-btn:active { background: var(--card); }
+</style>
+</head>
+<body>
+
+<canvas id="stars-canvas"></canvas>
+
+<div id="app">
+
+  <!-- HOME -->
+  <div id="home" class="screen active">
+    <div class="home-deco">✦ ✦ ✦</div>
+    <div class="home-ko">사랑의 불시착</div>
+    <div class="home-title">愛の不時着<br>クイズ</div>
+    <div class="home-en">CRASH LANDING ON YOU</div>
+    <span class="home-heart">🪂</span>
+
+    <div class="home-desc">
+      <p>全10問・3種類のクイズで<br>あなたの愛の不時着愛を試そう！</p>
+      <div class="badge-row">
+        <span class="badge badge-ox">○×</span>
+        <span class="badge badge-4ch">4択</span>
+        <span class="badge badge-ch">キャラ当て</span>
+      </div>
+      <div class="badge-row" style="margin-top:8px;">
+        <span class="badge badge-easy">やさしい</span>
+        <span class="badge badge-mid">ふつう</span>
+        <span class="badge badge-hard">むずかしい</span>
+      </div>
+    </div>
+
+    <button class="start-btn" onclick="startQuiz()">クイズをはじめる ▶</button>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="quiz" class="screen">
+    <div class="quiz-header">
+      <span class="quiz-count" id="q-count">Q1 / 10</span>
+      <span class="quiz-score-display">⭐ <span id="score-disp">0</span>点</span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-fill" id="progress"></div>
+    </div>
+    <div class="dots-row" id="dots"></div>
+    <div class="q-meta" id="q-meta"></div>
+    <div class="q-card">
+      <div class="question-text" id="q-text"></div>
+    </div>
+    <div id="choices-area"></div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="next-btn" onclick="nextQ()">次の問題へ →</button>
+  </div>
+
+  <!-- RESULT -->
+  <div id="result" class="screen">
+    <div class="result-emoji" id="r-emoji"></div>
+    <div class="result-title" id="r-title"></div>
+    <div class="result-score" id="r-score"></div>
+    <div class="result-total" id="r-total"></div>
+    <div class="result-dots" id="r-dots"></div>
+    <div class="result-msg" id="r-msg"></div>
+    <button class="result-btn" onclick="startQuiz()">もう一度チャレンジ！</button>
+    <button class="share-btn" onclick="shareResult()">結果をコピーしてシェア 📋</button>
+  </div>
+
+</div>
+
+<script>
+const QS = [
+  {
+    type:"4choice", difficulty:"easy",
+    q:"ユン・セリはどうやって北朝鮮に不時着しましたか？",
+    choices:["飛行機の墜落","パラグライダー","船の遭難","軍用ヘリ"],
+    answer:1,
+    exp:"パラグライダー中に突風で北朝鮮領内に飛ばされてしまいます。"
+  },
+  {
+    type:"ox", difficulty:"easy",
+    q:"リ・ジョンヒョクは北朝鮮軍の将校である。",
+    answer:true,
+    exp:"ジョンヒョクは北朝鮮軍の特殊部隊指揮官（将校）として登場します。"
+  },
+  {
+    type:"chara", difficulty:"easy",
+    q:"セリに恋心を抱く、ジョンヒョク部隊の人気コミカルキャラは？",
+    choices:[
+      {emoji:"😍", name:"ピョ・チス"},
+      {emoji:"😎", name:"クム・ウンドン"},
+      {emoji:"🧐", name:"ヤン・ギョンテク"},
+      {emoji:"😤", name:"チョ・チョルガン"}
+    ],
+    answer:0,
+    exp:"ピョ・チスはセリに夢中で、コミカルな恋愛描写がファンに大人気！"
+  },
+  {
+    type:"4choice", difficulty:"mid",
+    q:"セリが北朝鮮滞在中に隠れていた場所はどこですか？",
+    choices:["軍の基地内","ジョンヒョクの家の地下","村の民家","山の中の小屋"],
+    answer:1,
+    exp:"セリはジョンヒョクの家の地下に隠れながら、村の生活に溶け込んでいきます。"
+  },
+  {
+    type:"ox", difficulty:"mid",
+    q:"ジョンヒョクはスイスに留学し、ピアノを習っていた。",
+    answer:true,
+    exp:"ジョンヒョクはスイス留学中にピアノを学んでいました。これがセリとの重要な繋がりに。"
+  },
+  {
+    type:"chara", difficulty:"mid",
+    q:"北朝鮮の村でセリを温かく支える「おばさんグループ」のリーダー格は？",
+    choices:[
+      {emoji:"👩", name:"ウォルスク"},
+      {emoji:"👩‍🦳", name:"ソ・ダン"},
+      {emoji:"👩‍💼", name:"クム・オクは"},
+      {emoji:"🧕", name:"スンオク"}
+    ],
+    answer:0,
+    exp:"ウォルスクが率いるおばさんたちがセリを温かく支えます。笑いと涙の名シーン！"
+  },
+  {
+    type:"4choice", difficulty:"mid",
+    q:"ク・スンジュンはもともとどこの出身ですか？",
+    choices:["北朝鮮","中国","韓国","アメリカ"],
+    answer:2,
+    exp:"スンジュンは韓国の財閥御曹司でしたが、事件がきっかけで北朝鮮に逃げ込みました。"
+  },
+  {
+    type:"ox", difficulty:"hard",
+    q:"ク・スンジュンはもともと北朝鮮に亡命した韓国出身者である。",
+    answer:true,
+    exp:"正解！スンジュンは韓国人でしたが、事件をきっかけに北朝鮮に逃げ込んだ人物です。"
+  },
+  {
+    type:"4choice", difficulty:"hard",
+    q:"ジョンヒョクの兄・ムヒョクはどこで命を落とした？",
+    choices:["平壌","スイス","北朝鮮国内","韓国ソウル"],
+    answer:2,
+    exp:"兄のムヒョクは北朝鮮国内での事故で命を落としています。その真相がドラマの重要な伏線になります。"
+  },
+  {
+    type:"4choice", difficulty:"hard",
+    q:"セリとジョンヒョクが最後に会う「年に一度の場所」はどこ？",
+    choices:["ソウル市内","スイスのレマン湖畔","板門店","済州島"],
+    answer:1,
+    exp:"二人はスイスで年に一度だけ会うという形で愛を続けます。感動のラストシーン！"
+  }
+];
+
+let shuffled = [];
+let cur = 0, score = 0, answered = false, results = [];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function startQuiz() {
+  shuffled = shuffle(QS);
+  cur = 0; score = 0; answered = false; results = [];
+  showScreen('quiz');
+  renderQ();
+}
+
+function diffBadge(d) {
+  if (d === 'easy') return '<span class="badge badge-easy">やさしい</span>';
+  if (d === 'mid')  return '<span class="badge badge-mid">ふつう</span>';
+  return '<span class="badge badge-hard">むずかしい</span>';
+}
+
+function typeBadge(t) {
+  if (t === 'ox')      return '<span class="badge badge-ox">○×</span>';
+  if (t === '4choice') return '<span class="badge badge-4ch">4択</span>';
+  return '<span class="badge badge-ch">キャラ当て</span>';
+}
+
+function renderDots() {
+  const el = document.getElementById('dots');
+  el.innerHTML = shuffled.map((_, i) => {
+    let cls = 'dot';
+    if (i < cur) cls += results[i] ? ' correct' : ' wrong';
+    else if (i === cur) cls += ' current';
+    return `<span class="${cls}"></span>`;
+  }).join('');
+}
+
+function renderQ() {
+  const q = shuffled[cur];
+  document.getElementById('q-count').textContent = `Q${cur+1} / ${shuffled.length}`;
+  document.getElementById('score-disp').textContent = score;
+  document.getElementById('progress').style.width = (cur / shuffled.length * 100) + '%';
+  renderDots();
+  document.getElementById('q-meta').innerHTML = diffBadge(q.difficulty) + typeBadge(q.type);
+  document.getElementById('q-text').textContent = q.q;
+
+  let html = '';
+  if (q.type === '4choice') {
+    html = '<div class="choices">' + q.choices.map((c, i) =>
+      `<button class="choice-btn" data-i="${i}" onclick="ans4(${i})">
+        <span class="label">${['A','B','C','D'][i]}</span>
+        <span>${c}</span>
+      </button>`
+    ).join('') + '</div>';
+  } else if (q.type === 'ox') {
+    html = `<div class="ox-wrap">
+      <button class="ox-btn" id="ox-o" onclick="ansOX(true)">○</button>
+      <button class="ox-btn" id="ox-x" onclick="ansOX(false)">✕</button>
+    </div>`;
+  } else {
+    html = '<div class="chara-list">' + q.choices.map((c, i) =>
+      `<button class="chara-btn" data-i="${i}" onclick="ansChara(${i})">
+        <span class="icon">${c.emoji}</span>
+        <span>${c.name}</span>
+      </button>`
+    ).join('') + '</div>';
+  }
+
+  document.getElementById('choices-area').innerHTML = html;
+  document.getElementById('feedback').style.display = 'none';
+  document.getElementById('feedback').className = 'feedback';
+  const nb = document.getElementById('next-btn');
+  nb.classList.remove('show');
+  nb.textContent = cur < shuffled.length - 1 ? '次の問題へ →' : '結果を見る →';
+  answered = false;
+}
+
+function showFeedback(correct, exp) {
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback ' + (correct ? 'correct' : 'wrong');
+  fb.innerHTML = `<span class="feedback-icon">${correct ? '✓' : '✗'}</span>${correct ? '正解！ ' : '不正解… '}${exp}`;
+  fb.style.display = 'block';
+  document.getElementById('next-btn').classList.add('show');
+  document.getElementById('progress').style.width = ((cur + 1) / shuffled.length * 100) + '%';
+  document.getElementById('score-disp').textContent = score;
+}
+
+function ans4(i) {
+  if (answered) return;
+  answered = true;
+  const q = shuffled[cur];
+  const correct = i === q.answer;
+  if (correct) score++;
+  results.push(correct);
+  document.querySelectorAll('.choice-btn').forEach((b, idx) => {
+    b.classList.add('disabled');
+    if (idx === q.answer) b.classList.add('correct');
+    else if (idx === i) b.classList.add('wrong');
+    else b.classList.add('dim');
+  });
+  showFeedback(correct, q.exp);
+  renderDots();
+}
+
+function ansOX(val) {
+  if (answered) return;
+  answered = true;
+  const q = shuffled[cur];
+  const correct = val === q.answer;
+  if (correct) score++;
+  results.push(correct);
+  const bo = document.getElementById('ox-o');
+  const bx = document.getElementById('ox-x');
+  bo.classList.add('disabled'); bx.classList.add('disabled');
+  if (q.answer === true)  { bo.classList.add('correct'); if (!correct) bx.classList.add('wrong'); }
+  else                    { bx.classList.add('correct'); if (!correct) bo.classList.add('wrong'); }
+  showFeedback(correct, q.exp);
+  renderDots();
+}
+
+function ansChara(i) {
+  if (answered) return;
+  answered = true;
+  const q = shuffled[cur];
+  const correct = i === q.answer;
+  if (correct) score++;
+  results.push(correct);
+  document.querySelectorAll('.chara-btn').forEach((b, idx) => {
+    b.classList.add('disabled');
+    if (idx === q.answer) b.classList.add('correct');
+    else if (idx === i) b.classList.add('wrong');
+    else b.classList.add('dim');
+  });
+  showFeedback(correct, q.exp);
+  renderDots();
+}
+
+function nextQ() {
+  cur++;
+  if (cur >= shuffled.length) { showResult(); return; }
+  renderQ();
+}
+
+function showResult() {
+  showScreen('result');
+  const pct = Math.round(score / shuffled.length * 100);
+  let emoji, title, msg;
+  if (pct === 100) {
+    emoji = '🌟'; title = '完璧です！';
+    msg = 'あなたは真の「愛の不時着」マスター！\nセリとジョンヒョクの愛を誰よりも知っていますね。';
+  } else if (pct >= 80) {
+    emoji = '💕'; title = 'すばらしい！';
+    msg = '愛の不時着をしっかり見ていますね！\n惜しい問題はぜひ復習してみて。';
+  } else if (pct >= 60) {
+    emoji = '🪂'; title = 'なかなかです！';
+    msg = 'ちょっとだけ記憶があいまい？\nもう一度見直すともっと深まりますよ。';
+  } else if (pct >= 40) {
+    emoji = '💌'; title = 'もう少し！';
+    msg = 'ドラマを見返してリベンジしましょう！\n何度見ても新しい発見があります。';
+  } else {
+    emoji = '❄️'; title = 'ぜひ見てみて！';
+    msg = '愛の不時着、ぜひ一度見てください。\n一気見必至の名作です！';
+  }
+
+  document.getElementById('r-emoji').textContent = emoji;
+  document.getElementById('r-title').textContent = title;
+  document.getElementById('r-score').textContent = score;
+  document.getElementById('r-total').textContent = `/ ${shuffled.length}問中正解`;
+  document.getElementById('r-msg').textContent = msg;
+  document.getElementById('r-dots').innerHTML = results.map(r =>
+    `<span class="result-dot ${r ? 'c' : 'w'}"></span>`
+  ).join('');
+}
+
+function shareResult() {
+  const pct = Math.round(score / shuffled.length * 100);
+  const dots = results.map(r => r ? '🟡' : '⚫').join('');
+  const text = `🪂 愛の不時着クイズ\n${score}/${shuffled.length}問正解（${pct}%）\n${dots}\n#愛の不時着 #クラッシュランディングオンユー`;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      const b = document.querySelector('.share-btn');
+      const prev = b.textContent;
+      b.textContent = 'コピーしました！✓';
+      setTimeout(() => b.textContent = prev, 2000);
+    });
+  } else {
+    alert(text);
+  }
+}
+
+// Stars
+(function() {
+  const canvas = document.getElementById('stars-canvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  function init() {
+    stars = [];
+    for (let i = 0; i < 60; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.2 + 0.3,
+        a: Math.random(),
+        speed: Math.random() * 0.008 + 0.003,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      const alpha = 0.2 + 0.6 * (0.5 + 0.5 * Math.sin(s.phase + t * s.speed));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,230,180,${alpha})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+
+  resize();
+  init();
+  window.addEventListener('resize', () => { resize(); init(); });
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
